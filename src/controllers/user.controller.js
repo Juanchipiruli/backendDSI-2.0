@@ -35,7 +35,9 @@ const getAllUsers = async (req, res) => {
         const users = await User.findAll({
             attributes: { exclude: ['password'] } // Don't return passwords
         });
-        res.json(users);
+
+        const usersWithoutAdmin = users.filter(user => user.isAdmin === false);
+        res.json(usersWithoutAdmin);
     } catch (error) {
         res.status(500).json({ 
             message: 'Error al obtener los usuarios',
@@ -83,12 +85,10 @@ const updateUser = async (req, res) => {
         
         // Se prepara los datos del usuario para devolver
         const updateData = {};
-        if (username !== undefined) updateData.username = username;
         if (legajo !== undefined) updateData.legajo = legajo;
         if (nombre !== undefined) updateData.nombre = nombre;
         if (apellido !== undefined) updateData.apellido = apellido;
         if (email !== undefined) updateData.email = email;
-
         if (carrera !== undefined) updateData.carrera = carrera;
         if (localidad !== undefined) updateData.localidad = localidad;
         if (is_admin !== undefined) updateData.is_admin = is_admin;
@@ -228,7 +228,6 @@ const createUser = async (req, res) => {
         // Crear usuario
         const newUser = await User.create({
             legajo,
-            username: "",
             nombre,
             apellido,
             email,
@@ -254,6 +253,13 @@ const createUser = async (req, res) => {
             }
         });
     } catch (error) {
+        // Si es un error de validación de Sequelize, muestra los detalles
+        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({ 
+                message: error.message,
+                errors: error.errors // Esto te da el detalle
+            });
+        }
         res.status(500).json({ message: error.message });
     }
 };
